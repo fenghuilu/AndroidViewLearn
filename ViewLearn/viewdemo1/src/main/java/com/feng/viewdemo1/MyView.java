@@ -10,6 +10,7 @@ import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.VelocityTracker;
 import android.view.View;
 
 /**
@@ -57,27 +58,6 @@ public class MyView extends View {
             mMatrix.postScale(0.7f, 1f, 0.5f, 0.5f);
             mMatrix.postTranslate(mCurSlideX + mOffSetX[i], 200);
             canvas.drawBitmap(mBitmaps[i], mMatrix, mPaint);
-//            if (mCurSlideX < -300) {
-//                Bitmap temp = mBitmaps[0];
-//                for (int j = 0; j < mBitmaps.length; j++) {
-//                    if (j == mBitmaps.length - 1) {
-//                        mBitmaps[j] = temp;
-//                    } else {
-//                        mBitmaps[j] = mBitmaps[j + 1];
-//                    }
-//                }
-//                mOffSetX[0] += 1880;
-//            } else if (mCurSlideX > 300) {
-//                Bitmap temp2 = mBitmaps[mBitmaps.length - 1];
-//                for (int j = mBitmaps.length - 1; j >= 0; j--) {
-//                    if (j == 0) {
-//                        mBitmaps[0] = temp2;
-//                    } else {
-//                        mBitmaps[j] = mBitmaps[j - 1];
-//                    }
-//                }
-//                mOffSetX[mBitmapCount - 1] -= 1280;
-//            }
             if (mCurSlideX + mOffSetX[i] < -500) {
                 mOffSetX[i] += 3000;
             } else if (mCurSlideX + mOffSetX[i] > 2500) {
@@ -94,15 +74,26 @@ public class MyView extends View {
     float mCurX = 0;
     float mSlideX = 0;
     float mCurSlideX = 0;
+    VelocityTracker mVelocityTracker = null;
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
+
+                if (mVelocityTracker == null) {
+                    mVelocityTracker = VelocityTracker.obtain();
+                }
+                mVelocityTracker.addMovement(event);
+
                 mCurX = event.getX();
                 Log.d(TAG, "ACTION_DOWN mCurX = " + mCurX);
                 return true;
             case MotionEvent.ACTION_MOVE:
+
+                mVelocityTracker.addMovement(event);
+                mVelocityTracker.computeCurrentVelocity(50);
+
                 mSlideX = event.getX() - mCurX;
                 mCurX = event.getX();
                 mCurSlideX += mSlideX;
@@ -118,9 +109,55 @@ public class MyView extends View {
                         mOffSetX[i] -= 3000;
                     }
                 }
+                smoothScroll();
+                if (mVelocityTracker != null) {
+                    Log.d("haha"," mVelocityTracker.recycle()");
+                    mVelocityTracker.recycle();
+                    mVelocityTracker = null;
+                }
+                break;
+            case MotionEvent.ACTION_CANCEL:
                 break;
 
         }
         return super.onTouchEvent(event);
     }
+
+    float test = 50;
+    float xVelocity;
+
+    private void smoothScroll() {
+        Log.d(TAG, " smoothScroll");
+        xVelocity = mVelocityTracker.getXVelocity();
+        Log.d(TAG, " xVelocity = " + xVelocity);
+        Log.d("haha", " xVelocity = " + xVelocity);
+        post(refrash);
+    }
+
+    Runnable refrash = new Runnable() {
+        @Override
+        public void run() {
+            if (xVelocity < 0) {
+                xVelocity += test;
+                Log.d("haha", " run   xVelocity = " + xVelocity);
+                if (xVelocity >= 0) {
+                    xVelocity = 0;
+                    return;
+                }
+                mCurSlideX += xVelocity ;
+                invalidate();
+                postDelayed(refrash, 50);
+            }
+            else if (xVelocity > 0) {
+                xVelocity -= test;
+                if (xVelocity <= 0) {
+                    xVelocity = 0;
+                    return;
+                }
+                mCurSlideX += xVelocity ;
+                invalidate();
+                postDelayed(refrash, 50);
+            }
+        }
+    };
 }
