@@ -3,7 +3,9 @@ package com.feng.viewdemo1;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Camera;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.support.annotation.Nullable;
@@ -23,6 +25,7 @@ public class MyView extends View {
     int mBitmapCount = 5;
     Bitmap[] mBitmaps = new Bitmap[mBitmapCount];
     float[] mOffSetX = new float[mBitmapCount];
+    private Camera camera;
 
     public MyView(Context context) {
         super(context);
@@ -42,10 +45,21 @@ public class MyView extends View {
     private void init() {
         mMatrix = new Matrix();
         mPaint = new Paint();
+        camera = new Camera();
+        setBackgroundColor(Color.parseColor("#3f51b5"));
+//        mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+//        mPaint.setStyle(Paint.Style.FILL);
+//        mPaint.setColor(Color.parseColor("#ff4081"));
         for (int i = 0; i < mBitmaps.length; i++) {
-            mBitmaps[i] = BitmapFactory.decodeResource(getResources(), R.drawable.haha);
-            mOffSetX[i] = (i - 1) * 600 + 100;
+            mOffSetX[i] = (i - 1) * 550 + 100;
         }
+        mBitmaps[0] = BitmapFactory.decodeResource(getResources(), R.drawable.p1);
+        mBitmaps[1] = BitmapFactory.decodeResource(getResources(), R.drawable.p2);
+        mBitmaps[2] = BitmapFactory.decodeResource(getResources(), R.drawable.p3);
+        mBitmaps[3] = BitmapFactory.decodeResource(getResources(), R.drawable.p4);
+        mBitmaps[4] = BitmapFactory.decodeResource(getResources(), R.drawable.p5);
+        Log.d(TAG, "mBitmaps[0].getHeight() = " + mBitmaps[0].getHeight());
+        Log.d(TAG, "mBitmaps[0].getWidth() = " + mBitmaps[0].getWidth());
     }
 
     @Override
@@ -55,18 +69,30 @@ public class MyView extends View {
         for (int i = 0; i < mBitmaps.length; i++) {
             Log.d(TAG, "mOffSetX[" + i + "] = " + mOffSetX[i]);
             mMatrix.reset();
-            mMatrix.postScale(0.7f, 1f, 0.5f, 0.5f);
+
+
+//            camera.save();
+//            camera.translate(600,-100,0);
+//            camera.rotateY(-(960-(mCurSlideX + mOffSetX[i]))*0.1f);
+//            camera.rotateY(0);
+//            camera.getMatrix(mMatrix);
+//            camera.restore();
+//            mMatrix.postScale(0.7f, 1f, 0.5f, 0.5f);
             mMatrix.postTranslate(mCurSlideX + mOffSetX[i], 200);
+
+//            mMatrix.preTranslate(-getWidth()/2, -getHeight()/2);
+//            mMatrix.postTranslate(getWidth()/2, getHeight()/2);
+
             canvas.drawBitmap(mBitmaps[i], mMatrix, mPaint);
             if (mCurSlideX + mOffSetX[i] < -500) {
-                mOffSetX[i] += 3000;
-            } else if (mCurSlideX + mOffSetX[i] > 2500) {
-                mOffSetX[i] -= 3000;
+                mOffSetX[i] += 2750;
+            } else if (mCurSlideX + mOffSetX[i] > 2000) {
+                mOffSetX[i] -= 2750;
             }
         }
-//        if (mCurSlideX + mOffSetX[0] < -300) {
-//            mOffSetX[0] += 2500;
-//        } else if (mCurSlideX + mOffSetX[4] > 2800) {
+//        if (mCurSlideX  < -300) {
+//           Bitmap temp =  mBitmaps[0];
+//        } else if (mCurSlideX  > 300) {
 //            mOffSetX[4] -= 2500;
 //        }
     }
@@ -105,13 +131,13 @@ public class MyView extends View {
                 for (int i = 0; i < mBitmapCount; i++) {
                     if (mCurSlideX + mOffSetX[i] < -500) {
                         mOffSetX[i] += 3000;
-                    } else if (mCurSlideX + mOffSetX[i] > 2500) {
+                    } else if (mCurSlideX + mOffSetX[i] > 1900) {
                         mOffSetX[i] -= 3000;
                     }
                 }
                 smoothScroll();
                 if (mVelocityTracker != null) {
-                    Log.d("haha"," mVelocityTracker.recycle()");
+                    Log.d("haha", " mVelocityTracker.recycle()");
                     mVelocityTracker.recycle();
                     mVelocityTracker = null;
                 }
@@ -144,17 +170,16 @@ public class MyView extends View {
                     xVelocity = 0;
                     return;
                 }
-                mCurSlideX += xVelocity ;
+                mCurSlideX += xVelocity;
                 invalidate();
                 postDelayed(refrash, 50);
-            }
-            else if (xVelocity > 0) {
+            } else if (xVelocity > 0) {
                 xVelocity -= test;
                 if (xVelocity <= 0) {
                     xVelocity = 0;
                     return;
                 }
-                mCurSlideX += xVelocity ;
+                mCurSlideX += xVelocity;
                 invalidate();
                 postDelayed(refrash, 50);
             }
