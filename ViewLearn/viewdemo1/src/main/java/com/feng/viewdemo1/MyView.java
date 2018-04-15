@@ -14,6 +14,7 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.View;
+import android.widget.Scroller;
 
 /**
  * Created by 李超峰 on 2018/4/2.
@@ -46,6 +47,7 @@ public class MyView extends View {
         mMatrix = new Matrix();
         mPaint = new Paint();
         camera = new Camera();
+        mScroller = new Scroller(getContext());
         setBackgroundColor(Color.parseColor("#3f51b5"));
 //        mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 //        mPaint.setStyle(Paint.Style.FILL);
@@ -95,6 +97,16 @@ public class MyView extends View {
 //        } else if (mCurSlideX  > 300) {
 //            mOffSetX[4] -= 2500;
 //        }
+    }
+
+    Scroller mScroller;
+
+    @Override
+    public void computeScroll() {
+        super.computeScroll();
+        if (mScroller.computeScrollOffset()) {
+            postInvalidate();
+        }
     }
 
     float mCurX = 0;
@@ -160,6 +172,10 @@ public class MyView extends View {
         post(refrash);
     }
 
+    private void scrollBack() {
+
+    }
+
     Runnable refrash = new Runnable() {
         @Override
         public void run() {
@@ -168,6 +184,7 @@ public class MyView extends View {
                 Log.d("haha", " run   xVelocity = " + xVelocity);
                 if (xVelocity >= 0) {
                     xVelocity = 0;
+                    scrollBack();
                     return;
                 }
                 mCurSlideX += xVelocity;
@@ -177,6 +194,7 @@ public class MyView extends View {
                 xVelocity -= test;
                 if (xVelocity <= 0) {
                     xVelocity = 0;
+                    scrollBack();
                     return;
                 }
                 mCurSlideX += xVelocity;
