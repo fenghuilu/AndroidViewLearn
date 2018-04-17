@@ -89,13 +89,32 @@ public class MyView extends View {
 //        refreshData();
     }
 
+    private Matrix getComputeMatrix(float centerX, float centerY, float mDepthZ, Camera camera, float degrees) {
+
+        Matrix matrix = new Matrix();
+        camera.save();
+//        if (mReverse) {
+//            camera.translate(0.0f, 0.0f, mDepthZ * interpolatedTime);
+//        } else {
+//            camera.translate(0.0f, 0.0f, mDepthZ * (1.0f - interpolatedTime));
+//        }
+        camera.translate(0.0f, 0.0f, mDepthZ);
+        camera.rotateY(degrees);
+        camera.getMatrix(matrix);
+        camera.restore();
+
+        matrix.preTranslate(-centerX, -centerY);
+        matrix.postTranslate(centerX, centerY);
+        return matrix;
+    }
+
     @Override
     public void setAnimation(Animation animation) {
         super.setAnimation(animation);
     }
 
     private void refreshData() {
-        if (mCurSlideX < -300) {
+        if (mCurSlideX < -275) {
             Bitmap temp = mBitmaps[0];
             mBitmaps[0] = mBitmaps[1];
             mBitmaps[1] = mBitmaps[2];
@@ -104,7 +123,7 @@ public class MyView extends View {
             mBitmaps[4] = temp;
             mCurSlideX += 550;
             mCurSlideX = mCurSlideX % 2750;
-        } else if (mCurSlideX > 300) {
+        } else if (mCurSlideX > 275) {
             Bitmap temp = mBitmaps[4];
             mBitmaps[4] = mBitmaps[3];
             mBitmaps[3] = mBitmaps[2];
@@ -113,6 +132,9 @@ public class MyView extends View {
             mBitmaps[0] = temp;
             mCurSlideX -= 550;
             mCurSlideX = mCurSlideX % 2750;
+        }
+        if (mCurSlideX > 550 || mCurSlideX < -550) {
+            refreshData();
         }
     }
 
@@ -240,7 +262,6 @@ public class MyView extends View {
                     return;
                 }
                 mCurSlideX += mXVelocity;
-//                mCurSlideX += mXVelocity;
                 invalidate();
                 postDelayed(refrash, 2);
             } else if (mXVelocity > 0) {

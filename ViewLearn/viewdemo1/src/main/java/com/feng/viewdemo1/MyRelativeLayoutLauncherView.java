@@ -1,14 +1,14 @@
 package com.feng.viewdemo1;
 
+import android.app.Activity;
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Camera;
-import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.util.AttributeSet;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
@@ -39,7 +39,16 @@ public class MyRelativeLayoutLauncherView extends RelativeLayout {
         init();
     }
 
+    int mScreenWidth;
+    int mScreenHeight;
+
     private void init() {
+        DisplayMetrics dm = new DisplayMetrics();
+        ((Activity) getContext()).getWindowManager().getDefaultDisplay().getMetrics(dm);//display = getWindowManager().getDefaultDisplay();display.getMetrics(dm)（把屏幕尺寸信息赋值给DisplayMetrics dm）;
+        mScreenWidth = dm.widthPixels;
+        mScreenHeight = dm.heightPixels;
+//        width = Math.max(width, height);
+        Log.d(TAG, " mScreenWidth = " + mScreenWidth + " mScreenHeight = " + mScreenHeight);
         mMatrix = new Matrix();
         mPaint = new Paint();
         camera = new Camera();
@@ -48,8 +57,11 @@ public class MyRelativeLayoutLauncherView extends RelativeLayout {
 //        mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 //        mPaint.setStyle(Paint.Style.FILL);
 //        mPaint.setColor(Color.parseColor("#ff4081"));
+        mOffSetX[2] = mScreenWidth / 2 - 450 / 2;
+
         for (int i = 0; i < mImgViews.length; i++) {
-            mOffSetX[i] = (i - 1) * 550 + 100;
+            mOffSetX[i] = (i - 2) * 550 + mOffSetX[2];
+
             mImgViews[i] = new ImageView(getContext());
 //            mImgViews[i].setId();
 //            LayoutParams layoutParams = new LayoutParams(450, 600);
@@ -74,12 +86,31 @@ public class MyRelativeLayoutLauncherView extends RelativeLayout {
         Log.d("haha", "onLayout ");
         for (int i = 0; i < mImgViews.length; i++) {
             mImgViews[i].layout((int) mOffSetX[i], 200, (int) mOffSetX[i] + 450, 800);
+            float centerPosition = (mOffSetX[i] + 450 / 2 - mScreenWidth / 2);
+            Log.d(TAG, "  mOffSetX[" + i + "] = " + mOffSetX[i] + "centerPosition = " + centerPosition);
+            rotate3dAnim(mImgViews[i], centerPosition);
         }
+    }
+
+    private void rotate3dAnim(ImageView imageView, float centerPosition) {
+        Log.d(TAG, "  rotate3dAnim centerPosition = " + centerPosition);
+        Rotate3dAnimation rotate3dAnimation;
+        if (centerPosition >= 0) {
+            rotate3dAnimation = new Rotate3dAnimation(0, 30 * centerPosition / 1000, 0, imageView.getHeight() / 2, 0, false);
+        } else {
+            rotate3dAnimation = new Rotate3dAnimation(0, 30 * centerPosition / 1000, imageView.getWidth(), imageView.getHeight() / 2, 0, false);
+        }
+//            rotate3dAnimation.setInterpolator(new AccelerateInterpolator());
+        rotate3dAnimation.setDuration(1);
+        // 动画完成后保持完成的状态
+        rotate3dAnimation.setFillAfter(true);
+        imageView.startAnimation(rotate3dAnimation);
     }
 
     private void computeLayout() {
         mCurSlideX = mCurSlideX % 2750;
-        if (mCurSlideX < -300) {
+        int offset = (int) (mCurSlideX / 550);
+        if (mCurSlideX < -275) {
             ImageView temp = mImgViews[0];
             mImgViews[0] = mImgViews[1];
             mImgViews[1] = mImgViews[2];
@@ -87,7 +118,7 @@ public class MyRelativeLayoutLauncherView extends RelativeLayout {
             mImgViews[3] = mImgViews[4];
             mImgViews[4] = temp;
             mCurSlideX += 550;
-        } else if (mCurSlideX > 300) {
+        } else if (mCurSlideX > 275) {
             ImageView temp = mImgViews[4];
             mImgViews[4] = mImgViews[3];
             mImgViews[3] = mImgViews[2];
@@ -96,12 +127,17 @@ public class MyRelativeLayoutLauncherView extends RelativeLayout {
             mImgViews[0] = temp;
             mCurSlideX -= 550;
         }
+        if (mCurSlideX > 550 || mCurSlideX < -550) {
+            computeLayout();
+        }
     }
 
     private void invalidateLayout() {
         computeLayout();
         for (int i = 0; i < mImgViews.length; i++) {
 //            Log.d("haha", "mImgViews[" + i + "].getWidth() = " + mImgViews[i].getWidth());
+            float centerPosition = (mOffSetX[i] + mCurSlideX) + 450 / 2 - mScreenWidth / 2;
+            rotate3dAnim(mImgViews[i], centerPosition);
             mImgViews[i].layout((int) (mOffSetX[i] + mCurSlideX), 200, (int) (mOffSetX[i] + 450 + mCurSlideX), 800);
         }
     }
@@ -130,11 +166,13 @@ public class MyRelativeLayoutLauncherView extends RelativeLayout {
                 mVelocityTracker.computeCurrentVelocity(50);
 
                 mSlideX = event.getX() - mCurX;
-                mCurX = event.getX();
-                mCurSlideX += mSlideX;
-                Log.d(TAG, " mSlideX = " + mSlideX);
-                Log.d(TAG, " mCurX = " + mCurX);
-                invalidateLayout();
+                if (mSlideX > 0) {
+                    mCurX = event.getX();
+                    mCurSlideX += mSlideX;
+                    Log.d(TAG, " mSlideX = " + mSlideX);
+                    Log.d(TAG, " mCurX = " + mCurX);
+                    invalidateLayout();
+                }
                 break;
             case MotionEvent.ACTION_UP:
                 smoothScroll();
@@ -176,7 +214,7 @@ public class MyRelativeLayoutLauncherView extends RelativeLayout {
         @Override
         public void run() {
             if (xVelocity < 0) {
-                xVelocity = (float) (xVelocity*0.9);
+                xVelocity = (float) (xVelocity * 0.9);
                 Log.d("haha", " run   xVelocity = " + xVelocity);
                 if (xVelocity >= -1) {
                     xVelocity = 0;
@@ -184,18 +222,18 @@ public class MyRelativeLayoutLauncherView extends RelativeLayout {
                     return;
                 }
                 mCurSlideX += xVelocity;
-                mCurSlideX = mCurSlideX%2750;
+                mCurSlideX = mCurSlideX % 2750;
                 invalidateLayout();
                 postDelayed(refrash, 10);
             } else if (xVelocity > 0) {
-                xVelocity = (float) (xVelocity*0.9);
+                xVelocity = (float) (xVelocity * 0.9);
                 if (xVelocity <= 1) {
                     xVelocity = 0;
                     scrollBack();
                     return;
                 }
                 mCurSlideX += xVelocity;
-                mCurSlideX = mCurSlideX%2750;
+                mCurSlideX = mCurSlideX % 2750;
                 invalidateLayout();
                 postDelayed(refrash, 10);
             }
