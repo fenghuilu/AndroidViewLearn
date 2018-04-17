@@ -14,7 +14,8 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.View;
-import android.widget.Scroller;
+import android.view.ViewConfiguration;
+import android.view.animation.Animation;
 
 /**
  * Created by 李超峰 on 2018/4/2.
@@ -27,15 +28,14 @@ public class MyView extends View {
     Bitmap[] mBitmaps = new Bitmap[mBitmapCount];
     float[] mOffSetX = new float[mBitmapCount];
     private Camera camera;
+    private float mMinTouchSlop;
 
     public MyView(Context context) {
-        super(context);
-        init();
+        this(context, null);
     }
 
     public MyView(Context context, @Nullable AttributeSet attrs) {
-        super(context, attrs);
-        init();
+        this(context, null, 0);
     }
 
     public MyView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
@@ -44,16 +44,16 @@ public class MyView extends View {
     }
 
     private void init() {
+        mMinTouchSlop = ViewConfiguration.get(getContext()).getScaledTouchSlop();
         mMatrix = new Matrix();
         mPaint = new Paint();
         camera = new Camera();
-        mScroller = new Scroller(getContext());
         setBackgroundColor(Color.parseColor("#3f51b5"));
 //        mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 //        mPaint.setStyle(Paint.Style.FILL);
 //        mPaint.setColor(Color.parseColor("#ff4081"));
         for (int i = 0; i < mBitmaps.length; i++) {
-            mOffSetX[i] = (i - 1) * 550 + 100;
+            mOffSetX[i] = (i - 1) * 550;
         }
         mBitmaps[0] = BitmapFactory.decodeResource(getResources(), R.drawable.p1);
         mBitmaps[1] = BitmapFactory.decodeResource(getResources(), R.drawable.p2);
@@ -67,12 +67,10 @@ public class MyView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        Log.d(TAG, "onDraw   mSlideX = " + mSlideX);
+        Log.d(TAG, "onDraw   mCurSlideX = " + mCurSlideX);
+        refreshData();
         for (int i = 0; i < mBitmaps.length; i++) {
-            Log.d(TAG, "mOffSetX[" + i + "] = " + mOffSetX[i]);
             mMatrix.reset();
-
-
 //            camera.save();
 //            camera.translate(600,-100,0);
 //            camera.rotateY(-(960-(mCurSlideX + mOffSetX[i]))*0.1f);
@@ -81,78 +79,86 @@ public class MyView extends View {
 //            camera.restore();
 //            mMatrix.postScale(0.7f, 1f, 0.5f, 0.5f);
             mMatrix.postTranslate(mCurSlideX + mOffSetX[i], 200);
+//            mMatrix.postTranslate(mOffSetX[i], 200);
 
 //            mMatrix.preTranslate(-getWidth()/2, -getHeight()/2);
 //            mMatrix.postTranslate(getWidth()/2, getHeight()/2);
 
             canvas.drawBitmap(mBitmaps[i], mMatrix, mPaint);
-            if (mCurSlideX + mOffSetX[i] < -500) {
-                mOffSetX[i] += 2750;
-            } else if (mCurSlideX + mOffSetX[i] > 2000) {
-                mOffSetX[i] -= 2750;
-            }
         }
-//        if (mCurSlideX  < -300) {
-//           Bitmap temp =  mBitmaps[0];
-//        } else if (mCurSlideX  > 300) {
-//            mOffSetX[4] -= 2500;
-//        }
+//        refreshData();
     }
-
-    Scroller mScroller;
 
     @Override
-    public void computeScroll() {
-        super.computeScroll();
-        if (mScroller.computeScrollOffset()) {
-            postInvalidate();
+    public void setAnimation(Animation animation) {
+        super.setAnimation(animation);
+    }
+
+    private void refreshData() {
+        if (mCurSlideX < -300) {
+            Bitmap temp = mBitmaps[0];
+            mBitmaps[0] = mBitmaps[1];
+            mBitmaps[1] = mBitmaps[2];
+            mBitmaps[2] = mBitmaps[3];
+            mBitmaps[3] = mBitmaps[4];
+            mBitmaps[4] = temp;
+            mCurSlideX += 550;
+            mCurSlideX = mCurSlideX % 2750;
+        } else if (mCurSlideX > 300) {
+            Bitmap temp = mBitmaps[4];
+            mBitmaps[4] = mBitmaps[3];
+            mBitmaps[3] = mBitmaps[2];
+            mBitmaps[2] = mBitmaps[1];
+            mBitmaps[1] = mBitmaps[0];
+            mBitmaps[0] = temp;
+            mCurSlideX -= 550;
+            mCurSlideX = mCurSlideX % 2750;
         }
     }
 
+    float mDownX = 0;
     float mCurX = 0;
     float mSlideX = 0;
     float mCurSlideX = 0;
     VelocityTracker mVelocityTracker = null;
+    boolean mHasDown = false;
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-
+                mHasDown = true;
                 if (mVelocityTracker == null) {
                     mVelocityTracker = VelocityTracker.obtain();
                 }
                 mVelocityTracker.addMovement(event);
 
                 mCurX = event.getX();
+                mDownX = event.getX();
                 Log.d(TAG, "ACTION_DOWN mCurX = " + mCurX);
                 return true;
             case MotionEvent.ACTION_MOVE:
 
                 mVelocityTracker.addMovement(event);
-                mVelocityTracker.computeCurrentVelocity(50);
-
+                mVelocityTracker.computeCurrentVelocity(1000);
                 mSlideX = event.getX() - mCurX;
-                mCurX = event.getX();
-                mCurSlideX += mSlideX;
-                Log.d(TAG, " mSlideX = " + mSlideX);
-                Log.d(TAG, " mCurX = " + mCurX);
-                invalidate();
+//                if (Math.abs(mSlideX) >= mMinTouchSlop) {
+                if (Math.abs(mSlideX) > 0) {
+                    mCurX = event.getX();
+                    mCurSlideX += mSlideX;
+                    Log.d(TAG, " mSlideX = " + mSlideX);
+                    Log.d(TAG, " mCurX = " + mCurX);
+                    invalidate();
+                }
                 break;
             case MotionEvent.ACTION_UP:
-                for (int i = 0; i < mBitmapCount; i++) {
-                    if (mCurSlideX + mOffSetX[i] < -500) {
-                        mOffSetX[i] += 3000;
-                    } else if (mCurSlideX + mOffSetX[i] > 1900) {
-                        mOffSetX[i] -= 3000;
-                    }
-                }
-                smoothScroll();
-                if (mVelocityTracker != null) {
-                    Log.d("haha", " mVelocityTracker.recycle()");
-                    mVelocityTracker.recycle();
-                    mVelocityTracker = null;
-                }
+                mHasDown = false;
+                mXVelocity = mVelocityTracker.getXVelocity();
+                Log.d("haha", " mVelocityTracker.recycle()");
+                mVelocityTracker.recycle();
+                mVelocityTracker = null;
+
+                smoothScroll(mXVelocity);
                 break;
             case MotionEvent.ACTION_CANCEL:
                 break;
@@ -162,44 +168,94 @@ public class MyView extends View {
     }
 
     float test = 50;
-    float xVelocity;
+    float mXVelocity;
+    float mSmoothScrollTime = 0;
 
-    private void smoothScroll() {
-        Log.d(TAG, " smoothScroll");
-        xVelocity = mVelocityTracker.getXVelocity();
-        Log.d(TAG, " xVelocity = " + xVelocity);
-        Log.d("haha", " xVelocity = " + xVelocity);
+    private void smoothScroll(float xVelocity) {
+        Log.d(TAG, " smoothScroll xVelocity = " + xVelocity);
+        Log.e(TAG, " smoothScroll xVelocity = " + xVelocity);
+        mXVelocity = xVelocity;
+        if (Math.abs(mXVelocity) < 3000) {
+            slowScroll();
+            return;
+        }
+        if (mXVelocity > 5000) {
+            mXVelocity = 5000;
+        } else if (mXVelocity < -5000) {
+            mXVelocity = -5000;
+        }
+        test = Math.abs(mXVelocity / 20);
+        mSmoothScrollTime = xVelocity / 500;
         post(refrash);
     }
 
-    private void scrollBack() {
+    private void slowScroll() {
+        if (Math.abs(mCurSlideX) < 550 / 2) {
+            slowScrollBack();
+        } else {
+            if (mCurSlideX > 0) {
+                slowScrollNext();
+            } else if (mCurSlideX < 0) {
+                slowScrollPre();
+            }
+        }
+    }
+
+    Runnable mBackRunable = new Runnable() {
+        @Override
+        public void run() {
+            mCurSlideX -= mCurSlideX / 10;
+            if (Math.abs(mCurSlideX) <= 5) {
+                return;
+            }
+            invalidate();
+            postDelayed(mBackRunable, 50);
+        }
+    };
+
+    private void slowScrollBack() {
+    }
+
+    private void slowScrollNext() {
 
     }
 
+    private void slowScrollPre() {
+
+    }
+
+    float flag = 0.8f;
     Runnable refrash = new Runnable() {
         @Override
         public void run() {
-            if (xVelocity < 0) {
-                xVelocity += test;
-                Log.d("haha", " run   xVelocity = " + xVelocity);
-                if (xVelocity >= 0) {
-                    xVelocity = 0;
-                    scrollBack();
+            if (mHasDown) {
+                return;
+            }
+            if (mXVelocity < 0) {
+                mXVelocity = mXVelocity * flag;
+                Log.d("haha", " run   mXVelocity = " + mXVelocity);
+                if (mXVelocity >= -1) {
+                    mXVelocity = 0;
+                    slowScroll();
                     return;
                 }
-                mCurSlideX += xVelocity;
+                mCurSlideX += mXVelocity;
+//                mCurSlideX += mXVelocity;
                 invalidate();
-                postDelayed(refrash, 50);
-            } else if (xVelocity > 0) {
-                xVelocity -= test;
-                if (xVelocity <= 0) {
-                    xVelocity = 0;
-                    scrollBack();
+                postDelayed(refrash, 2);
+            } else if (mXVelocity > 0) {
+                mXVelocity = mXVelocity * flag;
+                Log.d("haha", " run   mXVelocity = " + mXVelocity);
+                if (mXVelocity < 1) {
+                    mXVelocity = 0;
+                    slowScroll();
                     return;
                 }
-                mCurSlideX += xVelocity;
+//                mCurSlideX += test;
+//                mCurSlideX -= mXVelocity;
+                mCurSlideX += mXVelocity;
                 invalidate();
-                postDelayed(refrash, 50);
+                postDelayed(refrash, 2);
             }
         }
     };
