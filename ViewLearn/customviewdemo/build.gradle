@@ -6,9 +6,8 @@ android {
 
 
     defaultConfig {
-        applicationId "com.feng.viewdemo1"
+        applicationId "com.feng.viewdemo"
         minSdkVersion 19
-        targetSdkVersion 27
         versionCode 1
         versionName "1.0"
 
@@ -24,6 +23,8 @@ android {
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation 'com.android.support:appcompat-v7:27.1.0'
+    implementation 'com.android.support:recyclerview-v7:27.1.0'
+    implementation 'com.android.support:cardview-v7:27.1.0'
 }
